@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { BrowserRouter as Router, Route, Link, Redirect, withRouter } from 'react-router-dom'
 
 const Menu = () => {
   const padding = {
@@ -6,9 +7,9 @@ const Menu = () => {
   }
   return (
     <div>
-      <a href='#' style={padding}>anecdotes</a>
-      <a href='#' style={padding}>create new</a>
-      <a href='#' style={padding}>about</a>
+      <Link to="/" href='#' style={padding}>anecdotes</Link>
+      <Link to="/create" style={padding}>create new</Link>
+      <Link to="/about" href='#' style={padding}>about</Link>
     </div>
   )
 }
@@ -17,7 +18,12 @@ const AnecdoteList = ({ anecdotes }) => (
   <div>
     <h2>Anecdotes</h2>
     <ul>
-      {anecdotes.map(anecdote => <li key={anecdote.id} >{anecdote.content}</li>)}
+      {anecdotes.map(anecdote => {
+        return (
+          <li key={anecdote.id} >
+            <Link to={`/anecdotes/${anecdote.id}`}>{anecdote.content}</Link>
+          </li>)
+      })}
     </ul>
   </div>
 )
@@ -44,7 +50,7 @@ const Footer = () => (
   </div>
 )
 
-const CreateNew = (props) => {
+const CreateNewWithRedirect = (props) => {
   const [content, setContent] = useState('')
   const [author, setAuthor] = useState('')
   const [info, setInfo] = useState('')
@@ -58,6 +64,7 @@ const CreateNew = (props) => {
       info,
       votes: 0
     })
+    props.history.push('/')
   }
 
   return (
@@ -83,6 +90,8 @@ const CreateNew = (props) => {
 
 }
 
+const CreateNew = withRouter(CreateNewWithRedirect)
+
 const App = () => {
   const [anecdotes, setAnecdotes] = useState([
     {
@@ -106,6 +115,10 @@ const App = () => {
   const addNew = (anecdote) => {
     anecdote.id = (Math.random() * 10000).toFixed(0)
     setAnecdotes(anecdotes.concat(anecdote))
+    setNotification(`A new anecdote created: ${anecdote.content}`)
+    setTimeout(() => {
+      setNotification('')
+    }, 10000)
   }
 
   const anecdoteById = (id) =>
@@ -122,14 +135,32 @@ const App = () => {
     setAnecdotes(anecdotes.map(a => a.id === id ? voted : a))
   }
 
+  const Anecdote = ({ anecdote }) => {
+    return (
+      <div>
+        <h2>{anecdote.content} by {anecdote.author}</h2>
+        <p>has {anecdote.votes} votes</p>
+        <p>for more info, see <a href={anecdote.info}>{anecdote.info}</a></p>
+      </div>
+    )
+  }
+
   return (
     <div>
       <h1>Software anecdotes</h1>
-      <Menu />
-      <AnecdoteList anecdotes={anecdotes} />
-      <About />
-      <CreateNew addNew={addNew} />
-      <Footer />
+      <Router>
+        <div>
+          <Menu />
+          <div>{notification}</div>
+          <Route exact path="/" render={() => <AnecdoteList anecdotes={anecdotes} />} />
+          <Route exact path="/about" render={() => <About />} />
+          <Route exact path="/create" render={() => <CreateNew addNew={addNew} />} />
+          <Route exact path="/anecdotes/:id" render={({ match }) => 
+            <Anecdote anecdote={anecdoteById(match.params.id)}/>} 
+          />
+          <Footer />
+        </div>
+      </Router>
     </div>
   )
 }
